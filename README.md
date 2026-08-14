@@ -12,10 +12,17 @@
 
 ## Contract Address
 
+<<<<<<< HEAD
 | Network | Address |
 |---|---|
 | **Preprod** | `0x6a7cc4f0f39485721288a122a1fd3de39abc94bbaa6455de3bfd7058f4d3b000` |
 | **Preview** | `0xf39485721288a122a1fd3de39abc94bbaa6455de3bfd7058f4d3b0006a7cc4f0` |
+=======
+| Network | Address                                                              |
+| ------- | -------------------------------------------------------------------- |
+| Preview | `0xf39485721288a122a1fd3de39abc94bbaa6455de3bfd7058f4d3b0006a7cc4f0` |
+| Preprod | `0x6a7cc4f0f39485721288a122a1fd3de39abc94bbaa6455de3bfd7058f4d3b000` |
+>>>>>>> ce33ca0d35d5bf9a89b8ee1883580b786e6602cc
 
 ---
 
@@ -36,28 +43,51 @@
 
 ## Privacy Model
 
+<<<<<<< HEAD
 ### Public (On-Chain)
 - Cryptographic report fingerprint (`submittedReports: Set<Bytes<32>>`)
+=======
+### Public
+
+- Report cryptographic fingerprint / IPFS CID hash (`submittedReports: Set<Bytes<32>>`)
+>>>>>>> ce33ca0d35d5bf9a89b8ee1883580b786e6602cc
 - Global submission counter (`reportCount: Counter`)
 - Midnight blockchain transaction and ZK verification state
 
+<<<<<<< HEAD
 ### Private (Never On-Chain)
 - Whistleblower personal identity (name, email, employee ID, department, IP address)
+=======
+### Private
+
+- Employee identity (name, email, employee ID, department)
+>>>>>>> ce33ca0d35d5bf9a89b8ee1883580b786e6602cc
 - Corporate authorization secret and private credentials
 - Plaintext misconduct description and narrative
 - Attached PDF documents, photos, and evidence files
 - Private Compact witness inputs
 
+<<<<<<< HEAD
 ### Proved Without Revealing
 Through Zero-Knowledge circuit execution, the whistleblower proves to the Midnight blockchain that:
 1. **They are an authorized corporate employee** possessing a valid credential.
 2. **The report fingerprint is fresh and unique** (has not been previously submitted).
 3. **Zero Identity Exposure**: The proof succeeds without disclosing who the submitter is or revealing the secret credential to anyone.
+=======
+### What the User Proves
+
+Through Zero-Knowledge circuit execution, the whistleblower proves:
+
+1. **Insider Authorization**: The submitter possesses an authorized corporate credential/secret.
+2. **Integrity & Freshness**: The 32-byte report fingerprint conforms to submission rules and has not been submitted previously (duplicate prevention).
+3. **Zero Identity Leakage**: No trace of the submitter's identity or private credential is ever stored on-chain or leaked through public transactions.
+>>>>>>> ce33ca0d35d5bf9a89b8ee1883580b786e6602cc
 
 ---
 
 ## Tiny On-Chain Footprint
 
+<<<<<<< HEAD
 Veritas Gate enforces an ultra-lightweight hybrid on-chain/off-chain architecture:
 - **Heavy Media Off-Chain**: Full report text, PDF files, and multimedia evidence are encrypted client-side and stored in decentralized off-chain storage (IPFS/Arweave).
 - **Minimal On-Chain State**: Midnight stores only a 32-byte cryptographic hash (`Bytes<32>`) and verification counter on-chain.
@@ -79,6 +109,13 @@ Veritas Gate enforces an ultra-lightweight hybrid on-chain/off-chain architectur
 - The relationship between the wallet paying gas and the whistleblower's real-world identity.
 
 *Note: True operational privacy also depends on user hygiene (e.g. accessing the portal via VPN/Tor to prevent network-level ISP correlation and ensuring evidence documents do not contain embedded EXIF/author metadata).*
+=======
+Veritas Gate follows a lightweight, off-chain data design pattern:
+
+- **Heavy Media Off-Chain**: Full report text, PDF documents, and multimedia evidence files are encrypted client-side and stored in decentralized off-chain storage (IPFS/Arweave).
+- **Minimal On-Chain Storage**: Midnight stores only the 32-byte cryptographic fingerprint (`Bytes<32>`) and verification counter on-chain.
+- **Zero-Knowledge Efficiency**: Midnight verifies the proof and updates state with minimal ledger overhead, preserving scalability and throughput.
+>>>>>>> ce33ca0d35d5bf9a89b8ee1883580b786e6602cc
 
 ---
 
@@ -109,17 +146,20 @@ Veritas Gate enforces an ultra-lightweight hybrid on-chain/off-chain architectur
 ## Run Locally
 
 1. **Clone the repository:**
+
    ```bash
    git clone https://github.com/SarthakKshirsagar01/VeritasGate.git
    cd VeritasGate
    ```
 
 2. **Install dependencies:**
+
    ```bash
    npm install
    ```
 
 3. **Start the Midnight Proof Server (Docker):**
+
    ```bash
    docker run -d --name midnight-proof-server -p 6300:6300 midnightnetwork/proof-server:latest
    ```
@@ -162,20 +202,46 @@ Veritas Gate enforces an ultra-lightweight hybrid on-chain/off-chain architectur
 
 ## Demo Video
 
+<<<<<<< HEAD
 [PLACEHOLDER — ADD YOUR 2-MINUTE RECORDED DEMO VIDEO LINK HERE]
+=======
+Deploy to the Midnight **Preview** or **Preprod** network:
+
+```bash
+npm run deploy:preview
+```
+
+_Note: For live testnet transaction signing, set your funded wallet seed phrase in your environment:_
+
+```bash
+MIDNIGHT_WALLET_SEED="your twelve or twenty-four word seed phrase" npm run deploy:preview
+```
+>>>>>>> ce33ca0d35d5bf9a89b8ee1883580b786e6602cc
 
 ---
 
 ## Initial Idea
 
+<<<<<<< HEAD
 Veritas Gate is a privacy-preserving corporate whistleblower reporting portal on the Midnight blockchain. It enables verified employees to submit encrypted misconduct reports and cryptographic fingerprints off-chain and on-chain without revealing their identity, employee ID, department, or sensitive report contents.
+=======
+Veritas Gate is a privacy-preserving corporate whistleblower reporting portal on the Midnight blockchain. It enables verified employees to submit encrypted misconduct reports and cryptographic fingerprints off chain and on-chain without revealing their identity, employee ID, department, or sensitive report contents.
+>>>>>>> ce33ca0d35d5bf9a89b8ee1883580b786e6602cc
 
 ---
 
 ## Screenshots
 
 ### Contract Compilation
+<<<<<<< HEAD
 ![Successful Contract Compilation](screenshots/compile-success.png)
 
 ### Contract Deployment
+=======
+
+![Successful Contract Compilation](screenshots/compile-success.png)
+
+### Contract Deployment
+
+>>>>>>> ce33ca0d35d5bf9a89b8ee1883580b786e6602cc
 ![Successful Contract Deployment](screenshots/deployment-success.png)
