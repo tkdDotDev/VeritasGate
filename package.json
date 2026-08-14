@@ -1,0 +1,35 @@
+{
+  "name": "veritas-gate",
+  "version": "1.0.0",
+  "description": "Privacy-Preserving Corporate Whistleblower Portal on Midnight",
+  "main": "dist/index.js",
+  "type": "module",
+  "scripts": {
+    "build": "npm run compile && tsc",
+    "compile": "wsl -e bash -c \"~/.compact/bin/compactc contracts/veritas-gate.compact managed/\"",
+    "compile:skip-zk": "wsl -e bash -c \"~/.compact/bin/compactc --skip-zk contracts/veritas-gate.compact managed/\"",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "deploy:preview": "tsx src/deploy.ts preview",
+    "deploy:preprod": "tsx src/deploy.ts preprod"
+  },
+  "keywords": [
+    "midnight",
+    "compact",
+    "zero-knowledge",
+    "whistleblower",
+    "privacy",
+    "governance"
+  ],
+  "author": "Veritas Gate Team",
+  "license": "Apache-2.0",
+  "dependencies": {
+    "@midnight-ntwrk/compact-runtime": "0.16.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3",
+    "vitest": "^2.1.8"
+  }
+}

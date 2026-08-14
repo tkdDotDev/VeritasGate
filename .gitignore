@@ -1,0 +1,16 @@
+# Dependencies
+node_modules/
+
+# Build artifacts
+dist/
+.tmp/
+
+# Logs and environment
+*.log
+.env
+.env.local
+
+# IDE
+.vscode/
+.idea/
+.DS_Store
