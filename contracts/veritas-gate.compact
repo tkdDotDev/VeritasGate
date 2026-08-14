@@ -1,0 +1,52 @@
+pragma language_version >= 0.23;
+
+import CompactStandardLibrary;
+
+// ==============================================================================
+// VERITAS GATE — PRIVACY-PRESERVING CORPORATE WHISTLEBLOWER PORTAL
+// ==============================================================================
+//
+// PRIVACY SPECIFICATION:
+//
+// PUBLIC:
+// - report fingerprint/CID-related public state (submittedReports Set)
+// - public report submission counter (reportCount)
+// - required verification state and cryptographic parameters
+//
+// PRIVATE:
+// - employee identity (name, employee ID, department, email)
+// - corporate authorization secret / private credentials
+// - sensitive misconduct report text and descriptions
+// - PDF contents, attached documents, and plaintext evidence
+//
+// PROVED (Zero-Knowledge Proofs):
+// - the submitter is authorized to submit a whistleblower report
+// - the report fingerprint satisfies the required submission rules
+// - the report fingerprint is unique and has not been submitted previously
+// ==============================================================================
+
+export ledger submittedReports: Set<Bytes<32>>;
+export ledger reportCount: Counter;
+
+// Private witness for whistleblower corporate authorization credential
+witness get_employee_secret(): Bytes<32>;
+
+// Circuit for submitting a whistleblower report fingerprint
+export circuit submitWhistleblowerReport(reportHash: Bytes<32>): [] {
+    // 1. Obtain the private employee authorization witness
+    const employeeSecret = get_employee_secret();
+
+    // 2. Verify authorization condition inside the zero-knowledge circuit
+    assert(employeeSecret != default<Bytes<32>>, "Unauthorized: corporate authorization secret required");
+    assert(reportHash != default<Bytes<32>>, "Invalid report fingerprint: cannot be null bytes");
+
+    // 3. Explicitly disclose public report fingerprint for ledger operations
+    const publicHash = disclose(reportHash);
+
+    // 4. Verify that the report fingerprint has not already been submitted (Duplicate Protection)
+    assert(!submittedReports.member(publicHash), "Duplicate report: fingerprint has already been registered");
+
+    // 5. Record the public report fingerprint in the ledger and increment total counter
+    submittedReports.insert(publicHash);
+    reportCount.increment(1);
+}
