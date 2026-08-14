@@ -6,7 +6,7 @@
 
 ## Live Demo
 
-[PLACEHOLDER — ADD YOUR DEPLOYED VERCEL/NETLIFY URL HERE]
+🔗 **[https://veritasgate.netlify.app](https://veritasgate.netlify.app)**
 
 ---
 
@@ -149,15 +149,14 @@ Veritas Gate enforces an ultra-lightweight hybrid on-chain/off-chain architectur
 
 ## Deploy Frontend
 
-### Deploying to Vercel:
-```bash
-npx vercel --prod
-```
+### Netlify Deployment:
+- **Build command**: `npm run build`
+- **Publish directory**: `dist`
+- **Live URL**: [https://veritasgate.netlify.app](https://veritasgate.netlify.app)
 
-### Deploying to Netlify:
-```bash
-npx netlify deploy --prod
-```
+### Vercel Deployment:
+- **Build command**: `npm run build`
+- **Output directory**: `dist`
 
 ---
 
