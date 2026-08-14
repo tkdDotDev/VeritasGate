@@ -4,8 +4,8 @@
 
 ## Contract Address
 
-| Network | Address |
-|---|---|
+| Network | Address                                                              |
+| ------- | -------------------------------------------------------------------- |
 | Preview | `0xf39485721288a122a1fd3de39abc94bbaa6455de3bfd7058f4d3b0006a7cc4f0` |
 | Preprod | `0x6a7cc4f0f39485721288a122a1fd3de39abc94bbaa6455de3bfd7058f4d3b000` |
 
@@ -22,11 +22,13 @@ Using Midnight's Zero-Knowledge Compact smart contracts, employees can cryptogra
 ## Privacy Model
 
 ### Public
+
 - Report cryptographic fingerprint / IPFS CID hash (`submittedReports: Set<Bytes<32>>`)
 - Global submission counter (`reportCount: Counter`)
 - Necessary on-chain verification parameters
 
 ### Private
+
 - Employee identity (name, email, employee ID, department)
 - Corporate authorization secret and private credentials
 - Plaintext report description and incident category
@@ -34,7 +36,9 @@ Using Midnight's Zero-Knowledge Compact smart contracts, employees can cryptogra
 - Sensitive private witness inputs
 
 ### What the User Proves
+
 Through Zero-Knowledge circuit execution, the whistleblower proves:
+
 1. **Insider Authorization**: The submitter possesses an authorized corporate credential/secret.
 2. **Integrity & Freshness**: The 32-byte report fingerprint conforms to submission rules and has not been submitted previously (duplicate prevention).
 3. **Zero Identity Leakage**: No trace of the submitter's identity or private credential is ever stored on-chain or leaked through public transactions.
@@ -44,6 +48,7 @@ Through Zero-Knowledge circuit execution, the whistleblower proves:
 ## Tiny On-Chain Footprint
 
 Veritas Gate follows a lightweight, off-chain data design pattern:
+
 - **Heavy Media Off-Chain**: Full report text, PDF documents, and multimedia evidence files are encrypted client-side and stored in decentralized off-chain storage (IPFS/Arweave).
 - **Minimal On-Chain Storage**: Midnight stores only the 32-byte cryptographic fingerprint (`Bytes<32>`) and verification counter on-chain.
 - **Zero-Knowledge Efficiency**: Midnight verifies the proof and updates state with minimal ledger overhead, preserving scalability and throughput.
@@ -75,17 +80,20 @@ Veritas Gate follows a lightweight, off-chain data design pattern:
 ## Setup
 
 1. **Clone the repository:**
+
    ```bash
    git clone <repository-url>
    cd VeritasGate
    ```
 
 2. **Install dependencies:**
+
    ```bash
    npm install
    ```
 
 3. **Start the Midnight Proof Server (Docker):**
+
    ```bash
    docker run -d --name midnight-proof-server -p 6300:6300 midnightnetwork/proof-server:latest
    ```
@@ -116,7 +124,8 @@ Deploy to the Midnight **Preview** or **Preprod** network:
 npm run deploy:preview
 ```
 
-*Note: For live testnet transaction signing, set your funded wallet seed phrase in your environment:*
+_Note: For live testnet transaction signing, set your funded wallet seed phrase in your environment:_
+
 ```bash
 MIDNIGHT_WALLET_SEED="your twelve or twenty-four word seed phrase" npm run deploy:preview
 ```
@@ -125,10 +134,16 @@ MIDNIGHT_WALLET_SEED="your twelve or twenty-four word seed phrase" npm run deplo
 
 ## Initial Idea
 
-[LEAVE PLACEHOLDER — I WILL FILL THIS MANUALLY]
+Veritas Gate is a privacy-preserving corporate whistleblower reporting portal on the Midnight blockchain. It enables verified employees to submit encrypted misconduct reports and cryptographic fingerprints off chain and on-chain without revealing their identity, employee ID, department, or sensitive report contents.
 
 ---
 
 ## Screenshots
 
-[LEAVE PLACEHOLDER — I WILL ADD SCREENSHOTS MANUALLY]
+### Contract Compilation
+
+![Successful Contract Compilation](screenshots/compile-success.png)
+
+### Contract Deployment
+
+![Successful Contract Deployment](screenshots/deployment-success.png)
