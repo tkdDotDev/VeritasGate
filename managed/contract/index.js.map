@@ -1,0 +1,8 @@
+{
+  "version": 3,
+  "file": "index.js",
+  "sourceRoot": "../../",
+  "sources": ["contracts/veritas-gate.compact"],
+  "names": [],
+  "mappings": ";;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;EAAA;;;;;;;;;;;;;MAkCA,AAAA,yBAiBC;;;;;cAjBwC,YAAqB;;;;;;;;;;;;;;;;;;yCAArB,YAAqB;;;;;;;;;2DAArB,YAAqB;;;OAiB7D;;;;;;;;GACA;EApDD;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;IA2BA;;;;;;;;;;yEAA+C;IAC/C;;;;;;;;;yEAAmC;;;;;;;GAwBlC;EArBD,AAAA,sBAAyC;;0DAAzC,mBAAyC;;;;;;;;;;;;;;GAAA;EAGzC,AAAA,4BAiBC,4BAjBwC,YAAqB;UAEpD,gBAAsC;;2CAGrC,gBAAc;;2CACd,YAAU;;UAGX,YAAiC,GAAX,YAAU;qDAG9B;;;;;;;;;;;4KAAwB,YAAU;;;;0HAAlB;;IAGxB;;;;;;;;;;2HAAwB,YAAU;;;;;wEAAlB;UAChB,KAAW;IAAX;;;;;;;;;;6FAAA,KAAW;;;;wEAAA;;GACd;;;;;;;;;;;;;;;;;;;;;;;;IAxBD;;;;;uCAAA;;;;;;;;;;;;;;;;4GAA+C;;;;;;uCAA/C;;;;;;;;;;;;4GAA+C;;;;;;;;;;;;;;uCAA/C;;;;;;;;;;;;;;;4GAA+C;;;;;;;;;KAAA;IAC/C;qCAAA;;;;;;;;;;;0GAAmC;KAAA;;;;;;;;;;;;"
+}
