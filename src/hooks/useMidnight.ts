@@ -38,6 +38,7 @@ declare global {
         getUnshieldedAddress?(): Promise<string>;
         getShieldedAddresses?(): Promise<string[]>;
       };
+      lace?: any;
     };
   }
 }
@@ -53,28 +54,50 @@ export function useMidnight() {
 
   // Check if Lace is present
   const checkInstalled = useCallback((): boolean => {
-    return Boolean(typeof window !== 'undefined' && window.midnight?.mnLace);
+    if (typeof window === 'undefined' || !window.midnight) return false;
+    // Check specific known keys or look for any injected wallet
+    return Boolean(window.midnight.mnLace || window.midnight.lace || Object.keys(window.midnight).length > 0);
   }, []);
 
   const connect = useCallback(async () => {
     setWallet((prev) => ({ ...prev, status: 'connecting', error: null }));
 
     try {
-      if (typeof window === 'undefined' || !window.midnight?.mnLace) {
-        // In browser without extension, provide simulation / demo connection
-        // or guide user to install Lace
+      if (typeof window === 'undefined' || !window.midnight) {
         setWallet({
           status: 'not_installed',
           address: null,
           network: null,
-          error: 'Midnight Lace Wallet extension was not detected. You can install Lace or test using Browser Simulation mode.',
+          error: 'Midnight Lace Wallet extension was not detected. Install Lace from the Chrome Web Store and create a Midnight wallet inside it.',
           serviceUris: null,
         });
         return;
       }
 
-      const mnLace = window.midnight.mnLace;
-      const api = await mnLace.enable();
+      // Try to find the wallet object safely
+      const midnightObj = window.midnight as Record<string, any>;
+      let walletObj = midnightObj.mnLace || midnightObj.lace;
+
+      // If specific keys aren't found or don't have an enable function, look for any valid wallet object
+      if (!walletObj || typeof walletObj.enable !== 'function') {
+        const validWallets = Object.values(midnightObj).filter(
+          (w) => w && typeof w === 'object' && typeof w.enable === 'function'
+        );
+        walletObj = validWallets[0];
+      }
+
+      if (!walletObj || typeof walletObj.enable !== 'function') {
+        setWallet({
+          status: 'not_installed',
+          address: null,
+          network: null,
+          error: 'Midnight Lace Wallet extension was not detected.',
+          serviceUris: null,
+        });
+        return;
+      }
+
+      const api = await walletObj.enable();
 
       let address: string | null = null;
       if (typeof api.getUnshieldedAddress === 'function') {
@@ -85,8 +108,8 @@ export function useMidnight() {
       }
 
       let serviceUris = null;
-      if (typeof mnLace.getServiceURIs === 'function') {
-        serviceUris = await mnLace.getServiceURIs();
+      if (typeof walletObj.getServiceURIs === 'function') {
+        serviceUris = await walletObj.getServiceURIs();
       }
 
       setWallet({

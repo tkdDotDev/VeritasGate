@@ -74,10 +74,10 @@ export const WalletConnect: React.FC<WalletConnectProps> = ({ wallet }) => {
               <div className="alert alert-warning">
                 <AlertTriangle size={18} />
                 <div className="alert-content">
-                  <p>Lace Wallet extension not detected in this browser.</p>
+                  <p>Lace Wallet extension not detected. Install Lace and create a Midnight wallet inside it (Menu → Add new wallet → Midnight).</p>
                   <div className="alert-actions">
                     <a
-                      href="https://chromewebstore.google.com/detail/lace/gafhhkghbfjjkeiendhgahigoampaomi"
+                      href="https://chromewebstore.google.com/detail/lace/gafhhkghbfjjkeiendhlofajokpaflmk"
                       target="_blank"
                       rel="noopener noreferrer"
                       className="btn-link"

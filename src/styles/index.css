@@ -400,6 +400,7 @@ body {
   color: var(--text-primary);
   font-family: var(--font-sans);
   font-size: 0.85rem;
+  min-height: 44px; /* WCAG touch target */
   outline: none;
   transition: border-color 0.2s ease;
 }
@@ -704,6 +705,7 @@ body {
   font-weight: 600;
   font-size: 0.85rem;
   padding: 0.65rem 1.25rem;
+  min-height: 44px; /* WCAG touch target */
   border-radius: var(--radius-md);
   cursor: pointer;
   transition: all 0.2s ease;
