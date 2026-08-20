@@ -1,111 +1,95 @@
-import * as compactRuntime from "@midnight-ntwrk/compact-runtime";
-import { Contract, ledger } from "../../managed/contract/index.js";
+import type { ConnectedAPI } from "@midnight-ntwrk/dapp-connector-api";
+import { dappConnectorProofProvider } from "@midnight-ntwrk/midnight-js-dapp-connector-proof-provider";
+import { submitCallTx } from "@midnight-ntwrk/midnight-js-contracts";
+import { CostModel } from "@midnight-ntwrk/midnight-js-protocol/ledger";
 import { bytesToHex } from "./encryption.js";
 
-export const VERITAS_PREPROD_ADDRESS =
-  "0x6a7cc4f0f39485721288a122a1fd3de39abc94bbaa6455de3bfd7058f4d3b000";
-
-export const VERITAS_PREVIEW_ADDRESS =
-  "0xf39485721288a122a1fd3de39abc94bbaa6455de3bfd7058f4d3b0006a7cc4f0";
-
-export interface LocalCircuitProofResult {
+export interface MidnightTransactionResult {
   contractAddress: string;
   reportHashHex: string;
-  reportCount: bigint;
-  status: "proof_generated";
-  proofTimeMs: number;
+  transactionId: string;
+  status: "submitted";
 }
 
-// In-memory contract simulation state across sessions for responsive local verification
-let activeContractState: any = null;
-let registeredFingerprints = new Set<string>();
-
-/**
- * Initializes or retrieves the active contract state simulator
- */
-function getOrInitContract(employeeSecretBytes: Uint8Array): {
-  contract: Contract<any>;
-  state: any;
-} {
-  const contract = new Contract({
-    get_employee_secret: (ctx: any) => [ctx.privateState, employeeSecretBytes],
-  });
-
-  if (!activeContractState) {
-    const initContext = compactRuntime.createConstructorContext(
-      { employeeSecret: employeeSecretBytes },
-      "00".repeat(32),
-    );
-    const initRes = contract.initialState(initContext);
-    activeContractState = initRes.currentContractState;
-  }
-
-  return { contract, state: activeContractState };
+export interface MidnightSubmissionRuntime {
+  compiledContract: unknown;
+  zkConfigProvider: Parameters<typeof dappConnectorProofProvider>[1];
+  providers: Omit<Parameters<typeof submitCallTx>[0], "proofProvider"> & {
+    privateStateProvider: {
+      setContractAddress(address: string): void;
+      set(privateStateId: string, state: Uint8Array): Promise<void>;
+    };
+  };
+  privateStateId: string;
 }
 
 /**
- * Generates a local proof for the Veritas Gate Compact circuit.
- * Executes the ZK circuit, verifies authorization, checks duplicate protection,
- * and updates public ledger state.
+ * Submits the report through Midnight.js and returns the network transaction ID.
+ * The compiled contract and provider bundle are deliberately injected because
+ * they are produced by the deployment flow, not by the browser form.
  */
-export async function generateLocalProof(params: {
+export async function submitWhistleblowerReport(params: {
+  walletApi: ConnectedAPI;
+  contractAddress: string;
   reportHash: Uint8Array;
   employeeSecret: Uint8Array;
-  network?: "preprod" | "preview";
-}): Promise<LocalCircuitProofResult> {
-  const startTime = performance.now();
-  const network = params.network || "preprod";
-  const contractAddress =
-    network === "preprod" ? VERITAS_PREPROD_ADDRESS : VERITAS_PREVIEW_ADDRESS;
+  runtime?: MidnightSubmissionRuntime;
+}): Promise<MidnightTransactionResult> {
+  if (!params.walletApi) {
+    throw new Error("A connected Midnight wallet is required");
+  }
 
-  const reportHex = bytesToHex(params.reportHash);
+  if (!/^0x[0-9a-fA-F]{64}$/.test(params.contractAddress)) {
+    throw new Error(
+      "A deployed Midnight contract address is required before submitting to Preprod",
+    );
+  }
 
   if (
+    params.reportHash.length !== 32 ||
     params.employeeSecret.length !== 32 ||
     params.employeeSecret.every((byte) => byte === 0)
   ) {
+    throw new Error("A 32-byte report hash and employee secret are required");
+  }
+
+  if (!params.runtime) {
     throw new Error(
-      "Unauthorized: Corporate employee authorization credential required",
+      "Midnight.js submission is not configured: deploy the Compact contract and provide its compiled contract, ZK config, and wallet providers",
     );
   }
 
-  if (registeredFingerprints.has(reportHex)) {
-    throw new Error(
-      "Duplicate report: this exact report fingerprint has already been recorded in the local proof state",
-    );
-  }
-
-  const { contract, state } = getOrInitContract(params.employeeSecret);
-  const circuitContext = compactRuntime.createCircuitContext(
-    compactRuntime.dummyContractAddress(),
-    "00".repeat(32),
-    state.data,
-    { employeeSecret: params.employeeSecret },
+  params.runtime.providers.privateStateProvider.setContractAddress(
+    params.contractAddress as never,
+  );
+  await params.runtime.providers.privateStateProvider.set(
+    params.runtime.privateStateId,
+    params.employeeSecret,
   );
 
-  const circuitExecution = contract.circuits.submitWhistleblowerReport(
-    circuitContext,
-    params.reportHash,
+  const proofProvider = await dappConnectorProofProvider(
+    params.walletApi,
+    params.runtime.zkConfigProvider,
+    CostModel.initialCostModel(),
   );
-
-  if (!circuitExecution || !circuitExecution.context) {
-    throw new Error(
-      "ZK Circuit Execution failed: could not generate valid proof",
-    );
-  }
-
-  activeContractState.data = new compactRuntime.ChargedState(
-    circuitExecution.context.currentQueryContext.state.state,
+  const result = await submitCallTx(
+    {
+      ...params.runtime.providers,
+      proofProvider,
+    } as Parameters<typeof submitCallTx>[0],
+    {
+      compiledContract: params.runtime.compiledContract as never,
+      circuitId: "submitWhistleblowerReport",
+      contractAddress: params.contractAddress as never,
+      privateStateId: params.runtime.privateStateId,
+      args: [params.reportHash],
+    } as never,
   );
-  registeredFingerprints.add(reportHex);
-
-  const updatedLedger = ledger(activeContractState.data);
 
   return {
-    contractAddress,
-    reportHashHex: reportHex,
-    reportCount: updatedLedger.reportCount,
-    status: "proof_generated",
-    proofTimeMs: Math.round(performance.now() - startTime),
+    contractAddress: params.contractAddress,
+    reportHashHex: bytesToHex(params.reportHash),
+    transactionId: result.public.txId,
+    status: "submitted",
   };
 }

@@ -1,6 +1,5 @@
-import React from 'react';
-import { Shield, Lock, ExternalLink, Github, BookOpen } from 'lucide-react';
-import { VERITAS_PREPROD_ADDRESS } from '../utils/contract.js';
+import React from "react";
+import { Shield, Lock, ExternalLink, Github, BookOpen } from "lucide-react";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -20,7 +19,9 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                 <h1 className="brand-title">VERITAS GATE</h1>
                 <span className="network-pill">Midnight Preprod</span>
               </div>
-              <p className="brand-tagline">Privacy-Preserving Corporate Whistleblower Portal</p>
+              <p className="brand-tagline">
+                Privacy-Preserving Corporate Whistleblower Portal
+              </p>
             </div>
           </div>
 
@@ -59,16 +60,14 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
               <span>Veritas Gate • Midnight Builder Challenge Level 2</span>
             </div>
             <p className="footer-text">
-              Zero-Knowledge governance reporting powered by Compact smart contracts on the
-              Midnight Network.
+              Zero-Knowledge governance reporting powered by Compact smart
+              contracts on the Midnight Network.
             </p>
           </div>
 
           <div className="footer-col text-right">
-            <div className="footer-contract-label">Preprod Contract Address:</div>
-            <code className="footer-contract-val" title={VERITAS_PREPROD_ADDRESS}>
-              {VERITAS_PREPROD_ADDRESS.slice(0, 16)}...{VERITAS_PREPROD_ADDRESS.slice(-12)}
-            </code>
+            <div className="footer-contract-label">Network:</div>
+            <span className="footer-contract-val">Midnight Preprod</span>
             <div className="footer-links">
               <a
                 href="https://faucet.preprod.midnight.network"

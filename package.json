@@ -29,6 +29,12 @@
   "license": "Apache-2.0",
   "dependencies": {
     "@midnight-ntwrk/compact-runtime": "0.16.0",
+    "@midnight-ntwrk/dapp-connector-api": "^4.0.1",
+    "@midnight-ntwrk/midnight-js": "^4.1.1",
+    "@midnight-ntwrk/midnight-js-contracts": "^4.1.1",
+    "@midnight-ntwrk/midnight-js-dapp-connector-proof-provider": "^4.1.1",
+    "@midnight-ntwrk/midnight-js-fetch-zk-config-provider": "^4.1.1",
+    "@midnight-ntwrk/midnight-js-indexer-public-data-provider": "^4.1.1",
     "lucide-react": "^0.475.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
@@ -42,6 +48,6 @@
     "typescript": "^5.7.3",
     "vite": "^6.1.0",
     "vite-plugin-wasm": "^3.4.1",
-    "vitest": "^2.1.8"
+    "vitest": "^4.1.11"
   }
 }

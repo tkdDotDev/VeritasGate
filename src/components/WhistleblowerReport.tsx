@@ -17,8 +17,8 @@ import {
   type IpfsUploadResult,
 } from "../utils/ipfs.js";
 import {
-  generateLocalProof,
-  type LocalCircuitProofResult,
+  submitWhistleblowerReport,
+  type MidnightTransactionResult,
 } from "../utils/contract.js";
 
 interface WhistleblowerReportProps {
@@ -56,7 +56,7 @@ export const WhistleblowerReport: React.FC<WhistleblowerReportProps> = ({
   const [stage, setStage] = useState<SubmissionStage>("idle");
   const [ipfsResult, setIpfsResult] = useState<IpfsUploadResult | null>(null);
   const [proofResult, setProofResult] =
-    useState<LocalCircuitProofResult | null>(null);
+    useState<MidnightTransactionResult | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const handleApplySample = (sample: (typeof SAMPLE_REPORTS)[0]) => {
@@ -98,7 +98,7 @@ export const WhistleblowerReport: React.FC<WhistleblowerReportProps> = ({
       const ipfsRes = await uploadEncryptedReportToIpfs(encrypted);
       setIpfsResult(ipfsRes);
 
-      // STAGE 3: Local Zero-Knowledge Proof Generation
+      // STAGE 3: Midnight.js proof generation and Preprod submission
       setStage("generating_proof");
       await new Promise((r) => setTimeout(r, 900));
 
@@ -110,10 +110,12 @@ export const WhistleblowerReport: React.FC<WhistleblowerReportProps> = ({
       const secretBytes = new Uint8Array(
         secretClean.match(/.{1,2}/g)?.map((byte) => parseInt(byte, 16)) || [],
       );
-      const proofRes = await generateLocalProof({
+      const proofRes = await submitWhistleblowerReport({
+        walletApi: wallet.walletApi!,
+        contractAddress:
+          import.meta.env.VITE_VERITAS_PREPROD_CONTRACT_ADDRESS || "",
         reportHash: ipfsRes.reportHash,
         employeeSecret: secretBytes,
-        network: "preprod",
       });
 
       setProofResult(proofRes);
