@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   FileText,
   Shield,
@@ -7,13 +7,19 @@ import {
   Send,
   KeyRound,
   Check,
-} from 'lucide-react';
-import { useMidnight } from '../hooks/useMidnight.js';
-import { ReportUpload, type AttachedEvidence } from './ReportUpload.js';
-import { ProofStatus, type SubmissionStage } from './ProofStatus.js';
-import { encryptReportLocally } from '../utils/encryption.js';
-import { uploadEncryptedReportToIpfs, type IpfsUploadResult } from '../utils/ipfs.js';
-import { submitReportToMidnight, type SubmissionProofResult } from '../utils/contract.js';
+} from "lucide-react";
+import { useMidnight } from "../hooks/useMidnight.js";
+import { ReportUpload, type AttachedEvidence } from "./ReportUpload.js";
+import { ProofStatus, type SubmissionStage } from "./ProofStatus.js";
+import { encryptReportLocally } from "../utils/encryption.js";
+import {
+  uploadEncryptedReportToIpfs,
+  type IpfsUploadResult,
+} from "../utils/ipfs.js";
+import {
+  generateLocalProof,
+  type LocalCircuitProofResult,
+} from "../utils/contract.js";
 
 interface WhistleblowerReportProps {
   wallet: ReturnType<typeof useMidnight>;
@@ -21,33 +27,36 @@ interface WhistleblowerReportProps {
 
 const SAMPLE_REPORTS = [
   {
-    title: 'Financial Irregularity',
-    category: 'FRAUD',
-    text: 'Discrepancy detected in Q3 revenue recognition. Software subscription contracts totaling $4.2M were recognized upfront before delivery, conflicting with standard revenue recognition guidelines.',
+    title: "Financial Irregularity",
+    category: "FRAUD",
+    text: "Discrepancy detected in Q3 revenue recognition. Software subscription contracts totaling $4.2M were recognized upfront before delivery, conflicting with standard revenue recognition guidelines.",
   },
   {
-    title: 'Workplace Safety Violation',
-    category: 'SAFETY',
-    text: 'Critical emergency safety valves in Facility B were bypassed during routine night shifts to avoid production slowdowns, creating an unmonitored high-pressure hazard.',
+    title: "Workplace Safety Violation",
+    category: "SAFETY",
+    text: "Critical emergency safety valves in Facility B were bypassed during routine night shifts to avoid production slowdowns, creating an unmonitored high-pressure hazard.",
   },
   {
-    title: 'Data Privacy Breach',
-    category: 'DATA_BREACH',
-    text: 'Unencrypted customer PII including passport scans and social security records were migrated to an unauthenticated cloud storage bucket accessible without MFA.',
+    title: "Data Privacy Breach",
+    category: "DATA_BREACH",
+    text: "Unencrypted customer PII including passport scans and social security records were migrated to an unauthenticated cloud storage bucket accessible without MFA.",
   },
 ];
 
-export const WhistleblowerReport: React.FC<WhistleblowerReportProps> = ({ wallet }) => {
-  const [category, setCategory] = useState<string>('FRAUD');
-  const [description, setDescription] = useState<string>('');
+export const WhistleblowerReport: React.FC<WhistleblowerReportProps> = ({
+  wallet,
+}) => {
+  const [category, setCategory] = useState<string>("FRAUD");
+  const [description, setDescription] = useState<string>("");
   const [evidence, setEvidence] = useState<AttachedEvidence | null>(null);
   const [employeeSecretHex, setEmployeeSecretHex] = useState<string>(
-    'a1b2c3d4e5f60718293a4b5c6d7e8f90123456789abcdef0123456789abcdef0'
+    "a1b2c3d4e5f60718293a4b5c6d7e8f90123456789abcdef0123456789abcdef0",
   );
 
-  const [stage, setStage] = useState<SubmissionStage>('idle');
+  const [stage, setStage] = useState<SubmissionStage>("idle");
   const [ipfsResult, setIpfsResult] = useState<IpfsUploadResult | null>(null);
-  const [proofResult, setProofResult] = useState<SubmissionProofResult | null>(null);
+  const [proofResult, setProofResult] =
+    useState<LocalCircuitProofResult | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const handleApplySample = (sample: (typeof SAMPLE_REPORTS)[0]) => {
@@ -59,12 +68,12 @@ export const WhistleblowerReport: React.FC<WhistleblowerReportProps> = ({ wallet
     e.preventDefault();
 
     if (!description.trim()) {
-      alert('Please enter a description of the incident.');
+      alert("Please enter a description of the incident.");
       return;
     }
 
-    if (wallet.status !== 'connected') {
-      alert('Please connect your Midnight Lace Wallet before submitting.');
+    if (wallet.status !== "connected") {
+      alert("Please connect your Midnight Lace Wallet before submitting.");
       return;
     }
 
@@ -72,7 +81,7 @@ export const WhistleblowerReport: React.FC<WhistleblowerReportProps> = ({ wallet
       setErrorMessage(null);
 
       // STAGE 1: Client-Side Encryption
-      setStage('encrypting');
+      setStage("encrypting");
       await new Promise((r) => setTimeout(r, 600)); // Visual feedback
 
       const encrypted = await encryptReportLocally({
@@ -83,53 +92,57 @@ export const WhistleblowerReport: React.FC<WhistleblowerReportProps> = ({ wallet
       });
 
       // STAGE 2: Off-Chain IPFS Storage & Fingerprinting
-      setStage('ipfs_upload');
+      setStage("ipfs_upload");
       await new Promise((r) => setTimeout(r, 600));
 
       const ipfsRes = await uploadEncryptedReportToIpfs(encrypted);
       setIpfsResult(ipfsRes);
 
       // STAGE 3: Local Zero-Knowledge Proof Generation
-      setStage('generating_proof');
+      setStage("generating_proof");
       await new Promise((r) => setTimeout(r, 900));
 
-      // Parse employee secret to 32-byte Uint8Array
-      const secretClean = employeeSecretHex.replace(/^0x/, '').padEnd(64, '0').slice(0, 64);
+      // STAGE 4: Local Compact proof generation
+      const secretClean = employeeSecretHex
+        .replace(/^0x/, "")
+        .padEnd(64, "0")
+        .slice(0, 64);
       const secretBytes = new Uint8Array(
-        secretClean.match(/.{1,2}/g)?.map((byte) => parseInt(byte, 16)) || []
+        secretClean.match(/.{1,2}/g)?.map((byte) => parseInt(byte, 16)) || [],
       );
-
-      // STAGE 4: Midnight Preprod Submission
-      setStage('submitting_tx');
-      const submissionRes = await submitReportToMidnight({
+      const proofRes = await generateLocalProof({
         reportHash: ipfsRes.reportHash,
         employeeSecret: secretBytes,
-        network: 'preprod',
+        network: "preprod",
       });
 
-      setProofResult(submissionRes);
-      setStage('confirmed');
+      setProofResult(proofRes);
+      setStage("proof_generated");
     } catch (err: any) {
-      console.error('Submission pipeline error:', err);
-      setErrorMessage(err?.message || 'An unexpected error occurred during report submission.');
-      setStage('error');
+      console.error("Submission pipeline error:", err);
+      setErrorMessage(
+        err?.message ||
+          "An unexpected error occurred during report submission.",
+      );
+      setStage("error");
     }
   };
 
   const handleReset = () => {
-    setStage('idle');
-    setDescription('');
+    setStage("idle");
+    setDescription("");
     setEvidence(null);
     setIpfsResult(null);
     setProofResult(null);
     setErrorMessage(null);
   };
 
-  const isSubmitting = stage !== 'idle' && stage !== 'confirmed' && stage !== 'error';
+  const isSubmitting =
+    stage !== "idle" && stage !== "proof_generated" && stage !== "error";
 
   return (
     <div className="report-container">
-      {stage !== 'idle' ? (
+      {stage !== "idle" ? (
         <ProofStatus
           stage={stage}
           ipfsResult={ipfsResult}
@@ -182,10 +195,16 @@ export const WhistleblowerReport: React.FC<WhistleblowerReportProps> = ({ wallet
                 disabled={isSubmitting}
               >
                 <option value="FRAUD">Fraud & Accounting Irregularities</option>
-                <option value="BRIBERY">Bribery & Foreign Corrupt Practices</option>
-                <option value="SAFETY">Workplace Safety & Environmental Hazard</option>
+                <option value="BRIBERY">
+                  Bribery & Foreign Corrupt Practices
+                </option>
+                <option value="SAFETY">
+                  Workplace Safety & Environmental Hazard
+                </option>
                 <option value="HARASSMENT">Harassment & Discrimination</option>
-                <option value="DATA_BREACH">Data Breach & Cybersecurity Non-Compliance</option>
+                <option value="DATA_BREACH">
+                  Data Breach & Cybersecurity Non-Compliance
+                </option>
                 <option value="OTHER">Other Ethics Breach</option>
               </select>
             </div>
@@ -193,7 +212,9 @@ export const WhistleblowerReport: React.FC<WhistleblowerReportProps> = ({ wallet
             <div className="form-group">
               <label htmlFor="report-description" className="form-label">
                 <span>Misconduct Details & Description</span>
-                <span className="char-count">{description.length} characters</span>
+                <span className="char-count">
+                  {description.length} characters
+                </span>
               </label>
               <textarea
                 id="report-description"
@@ -236,9 +257,10 @@ export const WhistleblowerReport: React.FC<WhistleblowerReportProps> = ({ wallet
                 required
               />
               <p className="form-hint">
-                This credential is processed as a private Compact witness in your local Zero-Knowledge
-                circuit. It proves you are an authorized corporate employee without disclosing your identity to
-                the ledger.
+                This credential is processed as a private Compact witness in
+                your local Zero-Knowledge circuit. It proves you are an
+                authorized corporate employee without disclosing your identity
+                to the ledger.
               </p>
             </div>
 
@@ -250,22 +272,30 @@ export const WhistleblowerReport: React.FC<WhistleblowerReportProps> = ({ wallet
               <ul className="privacy-summary-list">
                 <li>
                   <Check size={14} className="icon-success" />
-                  <span>Your report text and PDF are encrypted locally using AES-256-GCM.</span>
-                </li>
-                <li>
-                  <Check size={14} className="icon-success" />
-                  <span>The encrypted blob is pinned to IPFS, yielding an immutable CID.</span>
-                </li>
-                <li>
-                  <Check size={14} className="icon-success" />
                   <span>
-                    A Zero-Knowledge proof proves insider authorization without revealing your identity.
+                    Your report text and PDF are encrypted locally using
+                    AES-256-GCM.
                   </span>
                 </li>
                 <li>
                   <Check size={14} className="icon-success" />
                   <span>
-                    Only the 32-byte report fingerprint and cryptographic proof are stored on Midnight.
+                    The encrypted blob is pinned to IPFS, yielding an immutable
+                    CID.
+                  </span>
+                </li>
+                <li>
+                  <Check size={14} className="icon-success" />
+                  <span>
+                    A Zero-Knowledge proof proves insider authorization without
+                    revealing your identity.
+                  </span>
+                </li>
+                <li>
+                  <Check size={14} className="icon-success" />
+                  <span>
+                    Only the 32-byte report fingerprint and cryptographic proof
+                    are stored on Midnight.
                   </span>
                 </li>
               </ul>
@@ -273,7 +303,7 @@ export const WhistleblowerReport: React.FC<WhistleblowerReportProps> = ({ wallet
 
             <button
               type="submit"
-              disabled={isSubmitting || wallet.status !== 'connected'}
+              disabled={isSubmitting || wallet.status !== "connected"}
               className="btn btn-primary btn-large btn-block"
               id="submit-report-btn"
             >
@@ -281,9 +311,10 @@ export const WhistleblowerReport: React.FC<WhistleblowerReportProps> = ({ wallet
               <span>Submit Report with Zero-Knowledge Privacy</span>
             </button>
 
-            {wallet.status !== 'connected' && (
+            {wallet.status !== "connected" && (
               <p className="wallet-required-notice">
-                * Connect your Midnight Lace Wallet above to enable cryptographic submission.
+                * Connect your Midnight Lace Wallet above to enable
+                cryptographic submission.
               </p>
             )}
           </form>
