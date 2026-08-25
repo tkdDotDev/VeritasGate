@@ -17,7 +17,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
             <div>
               <div className="brand-title-row">
                 <h1 className="brand-title">VERITAS GATE</h1>
-                <span className="network-pill">Midnight Preprod</span>
+                <span className="network-pill">Midnight Preview</span>
               </div>
               <p className="brand-tagline">
                 Privacy-Preserving Corporate Whistleblower Portal
@@ -67,15 +67,15 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
 
           <div className="footer-col text-right">
             <div className="footer-contract-label">Network:</div>
-            <span className="footer-contract-val">Midnight Preprod</span>
+            <span className="footer-contract-val">Midnight Preview</span>
             <div className="footer-links">
               <a
-                href="https://faucet.preprod.midnight.network"
+                href="https://faucet.preview.midnight.network"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="footer-link"
               >
-                Preprod Faucet <ExternalLink size={11} />
+                Preview Faucet <ExternalLink size={11} />
               </a>
             </div>
           </div>

@@ -1,43 +1,56 @@
-/* ==============================================================================
-   VERITAS GATE — DESIGN SYSTEM & STYLING
-   ============================================================================== */
-
 :root {
-  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  --font-mono: 'JetBrains Mono', monospace;
+  --font-sans:
+    "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
 
-  /* Color Palette - Professional Midnight Slate */
-  --bg-app: #090d16;
-  --bg-surface: #111827;
-  --bg-surface-elevated: #1a2234;
-  --bg-surface-input: #0f172a;
-  
-  --border-subtle: #26334d;
-  --border-focus: #38bdf8;
-  
+  /* ============================================================
+     VERITAS GATE — PREMIUM PRIVACY PALETTE
+     Deep Navy + Indigo + Violet + Emerald
+     ============================================================ */
+
+  --bg-app: #070a12;
+  --bg-surface: #0f1420;
+  --bg-surface-elevated: #151c2b;
+  --bg-surface-input: #0b101b;
+
+  --border-subtle: #272a3a;
+  --border-focus: #818cf8;
+
   --text-primary: #f8fafc;
-  --text-secondary: #94a3b8;
-  --text-muted: #64748b;
+  --text-secondary: #a1a1aa;
+  --text-muted: #71717a;
 
-  --accent-primary: #0284c7;
-  --accent-primary-hover: #0369a1;
-  --accent-cyan: #38bdf8;
+  /* Primary — Indigo */
+  --accent-primary: #6366f1;
+  --accent-primary-hover: #4f46e5;
+
+  /* Secondary — Emerald */
   --accent-teal: #14b8a6;
-  
+
+  /* Highlight — Violet */
+  --accent-cyan: #a78bfa;
+
+  /* Status */
   --status-success-bg: rgba(20, 184, 166, 0.12);
   --status-success-text: #2dd4bf;
+
   --status-warning-bg: rgba(245, 158, 11, 0.12);
   --status-warning-text: #fbbf24;
+
   --status-error-bg: rgba(239, 68, 68, 0.12);
-  --status-error-text: #f87171;
+  --status-error-text: #fb7185;
 
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 14px;
+  /* Rounded premium cards */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
 
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
-  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
-  --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.5);
+  /* Soft layered shadows */
+  --shadow-sm: 0 2px 6px rgba(0, 0, 0, 0.25);
+
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.28), 0 2px 6px rgba(0, 0, 0, 0.18);
+
+  --shadow-lg: 0 20px 50px rgba(0, 0, 0, 0.35), 0 8px 20px rgba(0, 0, 0, 0.2);
 }
 
 * {

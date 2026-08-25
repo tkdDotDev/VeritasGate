@@ -29,7 +29,7 @@ export const WalletConnect: React.FC<WalletConnectProps> = ({ wallet }) => {
         {wallet.status === "connected" && (
           <span className="badge badge-success">
             <span className="status-indicator live"></span>
-            Connected ({wallet.network?.toUpperCase() || "PREPROD"})
+            Connected ({wallet.network?.toUpperCase() || "PREVIEW"})
           </span>
         )}
       </div>
@@ -71,7 +71,7 @@ export const WalletConnect: React.FC<WalletConnectProps> = ({ wallet }) => {
             <p className="wallet-description">
               Connect your <strong>Midnight Lace Wallet</strong> to submit
               zero-knowledge proofs to the{" "}
-              <strong>Midnight Preprod Network</strong>.
+              <strong>Midnight Preview Network</strong>.
             </p>
 
             {wallet.status === "not_installed" && (

@@ -35,7 +35,7 @@ export function useMidnight() {
   const [wallet, setWallet] = useState<WalletState>({
     status: "disconnected",
     address: null,
-    network: "preprod",
+    network: "preview",
     walletApi: null,
     error: null,
     serviceUris: null,
@@ -83,14 +83,14 @@ export function useMidnight() {
         return;
       }
 
-      const api = await walletApiProvider.connect("preprod");
+      const api = await walletApiProvider.connect("preview");
       const configuration = await api.getConfiguration();
       const addressInfo = await api.getUnshieldedAddress();
       const network = configuration.networkId.toLowerCase();
-      const walletNetwork = network.includes("preprod")
-        ? "preprod"
-        : network.includes("preview")
-          ? "preview"
+      const walletNetwork = network.includes("preview")
+        ? "preview"
+        : network.includes("preprod")
+          ? "preprod"
           : "other";
 
       setWallet({
@@ -123,7 +123,7 @@ export function useMidnight() {
     setWallet({
       status: "disconnected",
       address: null,
-      network: "preprod",
+      network: "preview",
       walletApi: null,
       error: null,
       serviceUris: null,

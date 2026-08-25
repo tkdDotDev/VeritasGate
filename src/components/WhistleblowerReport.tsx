@@ -49,9 +49,7 @@ export const WhistleblowerReport: React.FC<WhistleblowerReportProps> = ({
   const [category, setCategory] = useState<string>("FRAUD");
   const [description, setDescription] = useState<string>("");
   const [evidence, setEvidence] = useState<AttachedEvidence | null>(null);
-  const [employeeSecretHex, setEmployeeSecretHex] = useState<string>(
-    "a1b2c3d4e5f60718293a4b5c6d7e8f90123456789abcdef0123456789abcdef0",
-  );
+  const [employeeSecretHex, setEmployeeSecretHex] = useState<string>("");
 
   const [stage, setStage] = useState<SubmissionStage>("idle");
   const [ipfsResult, setIpfsResult] = useState<IpfsUploadResult | null>(null);
@@ -98,22 +96,27 @@ export const WhistleblowerReport: React.FC<WhistleblowerReportProps> = ({
       const ipfsRes = await uploadEncryptedReportToIpfs(encrypted);
       setIpfsResult(ipfsRes);
 
-      // STAGE 3: Midnight.js proof generation and Preprod submission
+      // STAGE 3: Midnight.js proof generation and Preview submission
       setStage("generating_proof");
       await new Promise((r) => setTimeout(r, 900));
 
       // STAGE 4: Local Compact proof generation
-      const secretClean = employeeSecretHex
-        .replace(/^0x/, "")
-        .padEnd(64, "0")
-        .slice(0, 64);
+      const secretClean = employeeSecretHex.replace(/^0x/, "").trim();
+      if (!/^[0-9a-fA-F]{64}$/.test(secretClean)) {
+        throw new Error(
+          "Employee secret must be exactly 32 bytes (64 hexadecimal characters).",
+        );
+      }
       const secretBytes = new Uint8Array(
-        secretClean.match(/.{1,2}/g)?.map((byte) => parseInt(byte, 16)) || [],
+        secretClean.match(/.{2}/g)!.map((byte) => parseInt(byte, 16)),
       );
+      if (secretBytes.every((byte) => byte === 0)) {
+        throw new Error("Employee secret cannot be all zeros.");
+      }
       const proofRes = await submitWhistleblowerReport({
         walletApi: wallet.walletApi!,
         contractAddress:
-          import.meta.env.VITE_VERITAS_PREPROD_CONTRACT_ADDRESS || "",
+          import.meta.env.VITE_VERITAS_PREVIEW_CONTRACT_ADDRESS || "",
         reportHash: ipfsRes.reportHash,
         employeeSecret: secretBytes,
       });
