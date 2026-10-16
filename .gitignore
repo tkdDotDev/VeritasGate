@@ -14,3 +14,15 @@ dist/
 .vscode/
 .idea/
 .DS_Store
+.env
+.envy
+.env
+
+# Secrets and local environment
+.env
+.env.*
+!.env.example
+
+# Generated files and dependencies
+node_modules/
+dist/

@@ -7,12 +7,39 @@ import {
   Power,
 } from "lucide-react";
 import { useMidnight } from "../hooks/useMidnight.js";
+import { deployVeritasGateContract } from "../utils/contract.js";
 
 interface WalletConnectProps {
   wallet: ReturnType<typeof useMidnight>;
 }
 
 export const WalletConnect: React.FC<WalletConnectProps> = ({ wallet }) => {
+  const [deploymentStatus, setDeploymentStatus] = React.useState<
+    "idle" | "deploying" | "deployed" | "error"
+  >("idle");
+  const [deployedAddress, setDeployedAddress] = React.useState<string | null>(
+    () => localStorage.getItem("veritas-gate-contract-address"),
+  );
+  const [deploymentError, setDeploymentError] = React.useState<string | null>(
+    null,
+  );
+
+  const handleDeploy = async () => {
+    if (!wallet.walletApi) return;
+
+    setDeploymentStatus("deploying");
+    setDeploymentError(null);
+    try {
+      const result = await deployVeritasGateContract(wallet.walletApi);
+      localStorage.setItem("veritas-gate-contract-address", result.contractAddress);
+      setDeployedAddress(result.contractAddress);
+      setDeploymentStatus("deployed");
+    } catch (error: any) {
+      setDeploymentError(error?.message || "Contract deployment failed.");
+      setDeploymentStatus("error");
+    }
+  };
+
   const truncateAddress = (addr: string | null) => {
     if (!addr) return "";
     if (addr.length <= 16) return addr;
@@ -29,7 +56,7 @@ export const WalletConnect: React.FC<WalletConnectProps> = ({ wallet }) => {
         {wallet.status === "connected" && (
           <span className="badge badge-success">
             <span className="status-indicator live"></span>
-            Connected ({wallet.network?.toUpperCase() || "PREVIEW"})
+            Connected ({wallet.network?.toUpperCase() || "PREPROD"})
           </span>
         )}
       </div>
@@ -65,13 +92,38 @@ export const WalletConnect: React.FC<WalletConnectProps> = ({ wallet }) => {
               <Power size={14} />
               <span>Disconnect</span>
             </button>
+            <button
+              onClick={handleDeploy}
+              disabled={deploymentStatus === "deploying"}
+              className="btn btn-primary btn-sm"
+            >
+              <ShieldCheck size={14} />
+              <span>
+                {deploymentStatus === "deploying"
+                  ? "Deploying Contract..."
+                  : "Deploy Contract to Preprod"}
+              </span>
+            </button>
+            {deployedAddress && (
+              <span className="info-value address-chip" title={deployedAddress}>
+                Contract: {truncateAddress(deployedAddress)}
+              </span>
+            )}
+            {deploymentError && (
+              <div className="alert alert-error">
+                <AlertTriangle size={18} />
+                <div className="alert-content">
+                  <p>{deploymentError}</p>
+                </div>
+              </div>
+            )}
           </div>
         ) : (
           <div className="disconnected-view">
             <p className="wallet-description">
-              Connect your <strong>Midnight Lace Wallet</strong> to submit
+              Connect your <strong>1AM Wallet</strong> to submit
               zero-knowledge proofs to the{" "}
-              <strong>Midnight Preview Network</strong>.
+              <strong>Midnight Preprod Network</strong>.
             </p>
 
             {wallet.status === "not_installed" && (
@@ -85,12 +137,12 @@ export const WalletConnect: React.FC<WalletConnectProps> = ({ wallet }) => {
                   </p>
                   <div className="alert-actions">
                     <a
-                      href="https://chromewebstore.google.com/detail/lace/gafhhkghbfjjkeiendhlofajokpaflmk"
+                      href="https://1am.xyz/"
                       target="_blank"
                       rel="noopener noreferrer"
                       className="btn-link"
                     >
-                      Install Lace Extension <ExternalLink size={12} />
+                      Install 1AM Wallet <ExternalLink size={12} />
                     </a>
                   </div>
                 </div>
@@ -111,13 +163,13 @@ export const WalletConnect: React.FC<WalletConnectProps> = ({ wallet }) => {
                 onClick={wallet.connect}
                 disabled={wallet.status === "connecting"}
                 className="btn btn-primary"
-                id="connect-lace-btn"
+                id="connect-1am-btn"
               >
                 <Wallet size={16} />
                 <span>
                   {wallet.status === "connecting"
-                    ? "Connecting to Lace..."
-                    : "Connect Lace Wallet"}
+                    ? "Connecting to 1AM..."
+                    : "Connect 1AM Wallet"}
                 </span>
               </button>
             </div>

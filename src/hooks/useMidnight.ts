@@ -35,7 +35,7 @@ export function useMidnight() {
   const [wallet, setWallet] = useState<WalletState>({
     status: "disconnected",
     address: null,
-    network: "preview",
+    network: "preprod",
     walletApi: null,
     error: null,
     serviceUris: null,
@@ -59,17 +59,18 @@ export function useMidnight() {
           network: null,
           walletApi: null,
           error:
-            "Midnight Lace Wallet extension was not detected. Install Lace from the Chrome Web Store and create a Midnight wallet inside it.",
+            "1AM Wallet extension was not detected. Make sure the 1AM Wallet extension is installed and unlocked.",
           serviceUris: null,
         });
         return;
       }
 
       const wallets = Object.values(window.midnight) as InitialAPI[];
-      const walletApiProvider =
-        wallets.find((provider) =>
-          provider.name.toLowerCase().includes("lace"),
-        ) ?? wallets[0];
+
+      // Veritas Gate uses 1AM Wallet exclusively.
+      const walletApiProvider = wallets.find(
+        (provider) => provider.rdns === "com.midnight.1am",
+      );
 
       if (!walletApiProvider) {
         setWallet({
@@ -77,14 +78,21 @@ export function useMidnight() {
           address: null,
           network: null,
           walletApi: null,
-          error: "Midnight Lace Wallet extension was not detected.",
+          error: "1AM Wallet extension was not detected.",
           serviceUris: null,
         });
         return;
       }
 
-      const api = await walletApiProvider.connect("preview");
+      const api = await walletApiProvider.connect("preprod");
       const configuration = await api.getConfiguration();
+      const balances = await api.getUnshieldedBalances();
+      console.log("networkId:", configuration.networkId);
+      console.log("Preprod balances:", balances);
+      const shielded = await api.getShieldedBalances();
+      console.log("Shielded balances:", shielded);
+      const addresses = await api.getShieldedAddresses();
+      console.log("Shielded address:", addresses.shieldedAddress);
       const addressInfo = await api.getUnshieldedAddress();
       const network = configuration.networkId.toLowerCase();
       const walletNetwork = network.includes("preview")
@@ -123,7 +131,7 @@ export function useMidnight() {
     setWallet({
       status: "disconnected",
       address: null,
-      network: "preview",
+      network: "preprod",
       walletApi: null,
       error: null,
       serviceUris: null,

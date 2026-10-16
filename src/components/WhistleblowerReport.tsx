@@ -71,7 +71,7 @@ export const WhistleblowerReport: React.FC<WhistleblowerReportProps> = ({
     }
 
     if (wallet.status !== "connected") {
-      alert("Please connect your Midnight Lace Wallet before submitting.");
+      alert("Please connect your 1AM Wallet before submitting.");
       return;
     }
 
@@ -96,7 +96,7 @@ export const WhistleblowerReport: React.FC<WhistleblowerReportProps> = ({
       const ipfsRes = await uploadEncryptedReportToIpfs(encrypted);
       setIpfsResult(ipfsRes);
 
-      // STAGE 3: Midnight.js proof generation and Preview submission
+      // STAGE 3: Midnight.js proof generation and Preprod submission
       setStage("generating_proof");
       await new Promise((r) => setTimeout(r, 900));
 
@@ -116,7 +116,7 @@ export const WhistleblowerReport: React.FC<WhistleblowerReportProps> = ({
       const proofRes = await submitWhistleblowerReport({
         walletApi: wallet.walletApi!,
         contractAddress:
-          import.meta.env.VITE_VERITAS_PREVIEW_CONTRACT_ADDRESS || "",
+            localStorage.getItem("veritas-gate-contract-address") || "",
         reportHash: ipfsRes.reportHash,
         employeeSecret: secretBytes,
       });
@@ -318,7 +318,7 @@ export const WhistleblowerReport: React.FC<WhistleblowerReportProps> = ({
 
             {wallet.status !== "connected" && (
               <p className="wallet-required-notice">
-                * Connect your Midnight Lace Wallet above to enable
+                * Connect your 1AM Wallet above to enable
                 cryptographic submission.
               </p>
             )}

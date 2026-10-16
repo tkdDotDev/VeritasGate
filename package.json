@@ -14,7 +14,8 @@
     "test": "vitest run tests/",
     "test:watch": "vitest tests/",
     "deploy:preview": "tsx src/deploy.ts preview",
-    "deploy:preprod": "tsx src/deploy.ts preprod"
+    "deploy:preprod": "tsx src/deploy.ts preprod",
+    "deploy:preprod:cli": "tsx scripts/deploy-preprod-cli.ts"
   },
   "keywords": [
     "midnight",
@@ -40,13 +41,20 @@
     "@midnight-ntwrk/midnight-js-indexer-public-data-provider": "^4.1.1",
     "@midnight-ntwrk/midnight-js-level-private-state-provider": "^4.1.1",
     "@midnight-ntwrk/midnight-js-network-id": "^4.1.1",
+    "@midnight-ntwrk/midnight-js-node-zk-config-provider": "^4.1.1",
     "@midnight-ntwrk/midnight-js-protocol": "^4.1.1",
     "@midnight-ntwrk/midnight-js-types": "^4.1.1",
     "@midnight-ntwrk/midnight-js-utils": "^4.1.1",
     "@midnight-ntwrk/wallet-sdk": "^1.1.0",
+    "@scure/bip39": "^2.4.0",
+    "@types/ws": "^8.18.1",
+    "buffer": "^6.0.3",
     "lucide-react": "^0.475.0",
+    "process": "^0.11.10",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "react-dom": "^18.3.1",
+    "rxjs": "^7.8.2",
+    "ws": "^8.21.3"
   },
   "devDependencies": {
     "@types/node": "^22.13.0",
@@ -56,6 +64,7 @@
     "tsx": "^4.19.2",
     "typescript": "^5.7.3",
     "vite": "^6.1.0",
+    "vite-plugin-node-polyfills": "^0.28.0",
     "vite-plugin-wasm": "^3.4.1",
     "vitest": "^4.1.11"
   }

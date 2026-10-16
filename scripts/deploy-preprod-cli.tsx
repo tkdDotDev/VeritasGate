@@ -1,0 +1,597 @@
+import "node:process";
+import { WebSocket } from "ws";
+import { firstValueFrom } from "rxjs";
+import { filter } from "rxjs/operators";
+
+import { CompiledContract } from "@midnight-ntwrk/compact-js";
+import { deployContract } from "@midnight-ntwrk/midnight-js-contracts";
+import { levelPrivateStateProvider } from "@midnight-ntwrk/midnight-js-level-private-state-provider";
+import { httpClientProofProvider } from "@midnight-ntwrk/midnight-js-http-client-proof-provider";
+import { indexerPublicDataProvider } from "@midnight-ntwrk/midnight-js-indexer-public-data-provider";
+import { NodeZkConfigProvider } from "@midnight-ntwrk/midnight-js-node-zk-config-provider";
+import { setNetworkId, getNetworkId } from "@midnight-ntwrk/midnight-js-network-id";
+import { CostModel } from "@midnight-ntwrk/midnight-js-protocol/ledger";
+
+import * as ledger from "@midnight-ntwrk/ledger-v8";
+
+import {
+  WalletFacade,
+  ShieldedWallet,
+  DustWallet,
+  HDWallet,
+  Roles,
+  UnshieldedWallet,
+  createKeystore,
+  InMemoryTransactionHistoryStorage,
+  PublicKey,
+} from "@midnight-ntwrk/wallet-sdk";
+
+import { Contract } from "../managed/contract/index.js";
+
+
+// ------------------------------------------------------------
+// Midnight Preprod configuration
+// ------------------------------------------------------------
+
+const NETWORK_ID = "preprod";
+
+const INDEXER_HTTP =
+  "https://indexer.preprod.midnight.network/api/v4/graphql";
+
+const INDEXER_WS =
+  "wss://indexer.preprod.midnight.network/api/v4/graphql/ws";
+
+const NODE_URL =
+  "wss://rpc.preprod.midnight.network/";
+
+const PROOF_SERVER =
+  "http://127.0.0.1:6300";
+
+const ZK_CONFIG_PATH =
+  new URL("../managed/", import.meta.url).pathname;
+
+
+// ------------------------------------------------------------
+// Make WebSocket available to GraphQL subscriptions
+// ------------------------------------------------------------
+
+globalThis.WebSocket = WebSocket as unknown as typeof globalThis.WebSocket;
+
+
+// ------------------------------------------------------------
+// Contract
+// ------------------------------------------------------------
+
+const compiledContract = CompiledContract.make(
+  "VeritasGate",
+  Contract,
+).pipe(
+  CompiledContract.withWitnesses({
+    get_employee_secret: (context: {
+      privateState: {
+        employeeSecret: Uint8Array;
+      };
+    }) => [
+      context.privateState,
+      context.privateState.employeeSecret,
+    ],
+  }),
+  CompiledContract.withCompiledFileAssets(ZK_CONFIG_PATH),
+);
+
+
+// ------------------------------------------------------------
+// Helpers
+// ------------------------------------------------------------
+
+function requireSeed(): Uint8Array {
+  const value = process.env.MIDNIGHT_PREPROD_SEED;
+
+  if (!value) {
+    throw new Error(
+      [
+        "",
+        "MIDNIGHT_PREPROD_SEED is not set.",
+        "",
+        "Set it locally before running the deploy command.",
+        "Do NOT paste your seed into ChatGPT.",
+        "",
+        "Example:",
+        "  export MIDNIGHT_PREPROD_SEED='<your-local-seed>'",
+        "",
+      ].join("\n"),
+    );
+  }
+
+  const seed = value.trim();
+
+  // Official Midnight CLI examples use a hex seed.
+  if (!/^[0-9a-fA-F]+$/.test(seed)) {
+    throw new Error(
+      "MIDNIGHT_PREPROD_SEED must currently be a hexadecimal seed.",
+    );
+  }
+
+  if (seed.length % 2 !== 0) {
+    throw new Error("MIDNIGHT_PREPROD_SEED has invalid hex length.");
+  }
+
+  return new Uint8Array(Buffer.from(seed, "hex"));
+}
+
+
+// ------------------------------------------------------------
+// Wallet provider bridge
+// ------------------------------------------------------------
+
+async function createWalletProvider(
+  wallet: WalletFacade,
+  shieldedSecretKeys: ledger.ZswapSecretKeys,
+  dustSecretKey: ledger.DustSecretKey,
+  unshieldedKeystore: ReturnType<typeof createKeystore>,
+) {
+  const state = await wallet.waitForSyncedState();
+
+  return {
+    getCoinPublicKey() {
+      return state.shielded.coinPublicKey.toHexString();
+    },
+
+    getEncryptionPublicKey() {
+      return state.shielded.encryptionPublicKey.toHexString();
+    },
+
+    async balanceTx(tx: unknown, ttl?: Date) {
+      const recipe = await wallet.balanceUnboundTransaction(
+        tx as never,
+        {
+          shieldedSecretKeys,
+          dustSecretKey,
+        },
+        {
+          ttl: ttl ?? new Date(Date.now() + 30 * 60 * 1000),
+        },
+      );
+
+      // wallet-sdk signing workaround
+      //
+      // Proven transaction intents use the "proof" marker.
+      // Wallet-created balancing transaction intents use "pre-proof".
+      signTransactionIntents(
+        recipe.baseTransaction as any,
+        (payload) => unshieldedKeystore.signData(payload),
+        "proof",
+      );
+
+      if (recipe.balancingTransaction) {
+        signTransactionIntents(
+          recipe.balancingTransaction as any,
+          (payload) => unshieldedKeystore.signData(payload),
+          "pre-proof",
+        );
+      }
+
+      return wallet.finalizeRecipe(recipe);
+    },
+
+    async submitTx(tx: unknown) {
+      return wallet.submitTransaction(tx as never);
+    },
+  };
+}
+
+
+// ------------------------------------------------------------
+// Signing workaround for wallet-sdk
+// ------------------------------------------------------------
+
+function signTransactionIntents(
+  tx: {
+    intents?: Map<number, any>;
+  },
+  signFn: (payload: Uint8Array) => ledger.Signature,
+  proofMarker: "proof" | "pre-proof",
+): void {
+  if (!tx.intents || tx.intents.size === 0) {
+    return;
+  }
+
+  for (const segment of tx.intents.keys()) {
+    const intent = tx.intents.get(segment);
+
+    if (!intent) {
+      continue;
+    }
+
+    const cloned = ledger.Intent.deserialize(
+      "signature",
+      proofMarker,
+      "pre-binding",
+      intent.serialize(),
+    );
+
+    const sigData = cloned.signatureData(segment);
+    const signature = signFn(sigData);
+
+    if (cloned.fallibleUnshieldedOffer) {
+      const signatures =
+        cloned.fallibleUnshieldedOffer.inputs.map(
+          (_input: any, i: number) =>
+            cloned.fallibleUnshieldedOffer!.signatures.at(i) ??
+            signature,
+        );
+
+      cloned.fallibleUnshieldedOffer =
+        cloned.fallibleUnshieldedOffer.addSignatures(signatures);
+    }
+
+    if (cloned.guaranteedUnshieldedOffer) {
+      const signatures =
+        cloned.guaranteedUnshieldedOffer.inputs.map(
+          (_input: any, i: number) =>
+            cloned.guaranteedUnshieldedOffer!.signatures.at(i) ??
+            signature,
+        );
+
+      cloned.guaranteedUnshieldedOffer =
+        cloned.guaranteedUnshieldedOffer.addSignatures(signatures);
+    }
+
+    tx.intents.set(segment, cloned);
+  }
+}
+
+
+// ------------------------------------------------------------
+// Main
+// ------------------------------------------------------------
+
+async function main() {
+  console.log("");
+  console.log("==============================================");
+  console.log("       VERITAS GATE PREPROD CLI DEPLOY");
+  console.log("==============================================");
+  console.log("");
+
+  setNetworkId(NETWORK_ID);
+
+  console.log("Network:", getNetworkId());
+  console.log("Indexer:", INDEXER_HTTP);
+  console.log("Node:", NODE_URL);
+  console.log("Proof server:", PROOF_SERVER);
+  console.log("ZK artifacts:", ZK_CONFIG_PATH);
+  console.log("");
+
+  // ----------------------------------------------------------
+  // Seed
+  // ----------------------------------------------------------
+
+  const seed = requireSeed();
+
+  console.log("✓ Wallet seed loaded locally");
+  console.log("");
+
+  // ----------------------------------------------------------
+  // Derive wallet keys
+  // ----------------------------------------------------------
+
+  const hdWallet = HDWallet.fromSeed(seed);
+
+  if (hdWallet.type !== "seedOk") {
+    throw new Error("Failed to initialize HD wallet from seed.");
+  }
+
+  const derivation = hdWallet.hdWallet
+    .selectAccount(0)
+    .selectRoles([
+      Roles.Zswap,
+      Roles.NightExternal,
+      Roles.Dust,
+    ])
+    .deriveKeysAt(0);
+
+  if (derivation.type !== "keysDerived") {
+    throw new Error("Failed to derive wallet keys.");
+  }
+
+  const keys = derivation.keys;
+
+  hdWallet.hdWallet.clear();
+
+  console.log("✓ Wallet keys derived");
+
+  // ----------------------------------------------------------
+  // Wallet components
+  // ----------------------------------------------------------
+
+  const shieldedSecretKeys =
+    ledger.ZswapSecretKeys.fromSeed(keys[Roles.Zswap]);
+
+  const dustSecretKey =
+    ledger.DustSecretKey.fromSeed(keys[Roles.Dust]);
+
+  const unshieldedKeystore =
+    createKeystore(
+      keys[Roles.NightExternal],
+      getNetworkId(),
+    );
+
+  console.log(
+    "Unshielded address:",
+    unshieldedKeystore.getBech32Address(),
+  );
+
+  // ----------------------------------------------------------
+  // Wallet configuration
+  // ----------------------------------------------------------
+
+  const shieldedConfig = {
+    networkId: getNetworkId(),
+    indexerClientConnection: {
+      indexerHttpUrl: INDEXER_HTTP,
+      indexerWsUrl: INDEXER_WS,
+    },
+    provingServerUrl: new URL(PROOF_SERVER),
+    relayURL: new URL(NODE_URL),
+  };
+
+  const unshieldedConfig = {
+    networkId: getNetworkId(),
+    indexerClientConnection: {
+      indexerHttpUrl: INDEXER_HTTP,
+      indexerWsUrl: INDEXER_WS,
+    },
+    txHistoryStorage:
+      new InMemoryTransactionHistoryStorage(),
+  };
+
+  const dustConfig = {
+    networkId: getNetworkId(),
+    costParameters: {
+      additionalFeeOverhead: 300_000_000_000_000n,
+      feeBlocksMargin: 5,
+    },
+    indexerClientConnection: {
+      indexerHttpUrl: INDEXER_HTTP,
+      indexerWsUrl: INDEXER_WS,
+    },
+    provingServerUrl: new URL(PROOF_SERVER),
+    relayURL: new URL(NODE_URL),
+  };
+
+  // ----------------------------------------------------------
+  // Start wallet
+  // ----------------------------------------------------------
+
+  const wallet = await WalletFacade.init({
+    configuration: {
+      ...shieldedConfig,
+      ...unshieldedConfig,
+      ...dustConfig,
+    },
+
+    shielded: (config: any) =>
+      ShieldedWallet(config).startWithSecretKeys(
+        shieldedSecretKeys,
+      ),
+
+    unshielded: (config: any) =>
+      UnshieldedWallet(config).startWithPublicKey(
+        PublicKey.fromKeyStore(unshieldedKeystore),
+      ),
+
+    dust: (config: any) =>
+      DustWallet(config).startWithSecretKey(
+        dustSecretKey,
+        ledger.LedgerParameters.initialParameters().dust,
+      ),
+  });
+
+  await wallet.start(
+    shieldedSecretKeys,
+    dustSecretKey,
+  );
+
+  console.log("✓ Wallet started");
+  console.log("");
+
+  // ----------------------------------------------------------
+  // Sync
+  // ----------------------------------------------------------
+
+  const state = await wallet.waitForSyncedState();
+
+  console.log("✓ Wallet synced");
+  console.log("");
+
+  console.log(
+    "NIGHT UTXOs:",
+    state.unshielded.availableCoins.length,
+  );
+
+  console.log(
+    "DUST coins:",
+    state.dust.availableCoins.length,
+  );
+
+  // ----------------------------------------------------------
+  // Generate DUST if necessary
+  // ----------------------------------------------------------
+
+  if (state.dust.availableCoins.length === 0) {
+    const nightUtxos =
+      state.unshielded.availableCoins.filter(
+        (coin: any) =>
+          coin.meta?.registeredForDustGeneration !== true,
+      );
+
+    if (nightUtxos.length === 0) {
+      console.log("");
+      console.log(
+        "No unregistered NIGHT UTXOs available for DUST generation.",
+      );
+      console.log(
+        "Fund the wallet and wait for the NIGHT UTXOs to appear.",
+      );
+
+      await wallet.stop();
+      return;
+    }
+
+    console.log("");
+    console.log(
+      `Registering ${nightUtxos.length} NIGHT UTXO(s) for DUST...`,
+    );
+
+    const registrationRecipe =
+      await wallet.registerNightUtxosForDustGeneration(
+        nightUtxos,
+        unshieldedKeystore.getPublicKey(),
+        (payload: Uint8Array) =>
+          unshieldedKeystore.signData(payload),
+      );
+
+    const finalizedRegistration =
+      await wallet.finalizeRecipe(
+        registrationRecipe,
+      );
+
+    const registrationTxId =
+      await wallet.submitTransaction(
+        finalizedRegistration,
+      );
+
+    console.log(
+      "✓ DUST registration submitted:",
+      registrationTxId,
+    );
+
+    console.log("");
+    console.log(
+      "Waiting for DUST to become available...",
+    );
+
+    await firstValueFrom(
+      wallet.state().pipe(
+        filter(
+          (s: any) =>
+            s.isSynced &&
+            s.dust.availableCoins.length > 0,
+        ),
+      ),
+    );
+
+    console.log("✓ DUST is available");
+  }
+
+  // ----------------------------------------------------------
+  // Providers
+  // ----------------------------------------------------------
+
+  const walletProvider =
+    await createWalletProvider(
+      wallet,
+      shieldedSecretKeys,
+      dustSecretKey,
+      unshieldedKeystore,
+    );
+
+  const accountId =
+    walletProvider.getCoinPublicKey();
+
+  const storagePassword =
+    `${Buffer.from(accountId, "hex").toString("base64")}!`;
+
+  const providers = {
+    privateStateProvider:
+      levelPrivateStateProvider({
+        privateStateStoreName:
+          "veritas-gate-private-state",
+        accountId,
+        privateStoragePasswordProvider:
+          () => storagePassword,
+      }),
+
+    publicDataProvider:
+      indexerPublicDataProvider(
+        INDEXER_HTTP,
+        INDEXER_WS,
+      ),
+
+    zkConfigProvider:
+      new NodeZkConfigProvider(
+        ZK_CONFIG_PATH,
+      ),
+
+    proofProvider:
+      httpClientProofProvider(
+        PROOF_SERVER,
+        new NodeZkConfigProvider(
+          ZK_CONFIG_PATH,
+        ),
+      ),
+
+    walletProvider,
+    midnightProvider: walletProvider,
+  };
+
+  console.log("");
+  console.log("✓ Midnight providers configured");
+  console.log("");
+
+  // ----------------------------------------------------------
+  // Deploy
+  // ----------------------------------------------------------
+
+  console.log("==============================================");
+  console.log(" DEPLOYING VERITAS GATE TO MIDNIGHT PREPROD");
+  console.log("==============================================");
+  console.log("");
+
+  const initialPrivateState = {
+    employeeSecret: new Uint8Array(32),
+  };
+
+  const deployed = await deployContract(
+    providers as any,
+    {
+      compiledContract: compiledContract as any,
+      privateStateId:
+        "veritas-gate-private-state",
+      initialPrivateState,
+    } as any,
+  );
+
+  const contractAddress =
+    deployed.deployTxData.public.contractAddress;
+
+  const transactionId =
+    deployed.deployTxData.public.txId;
+
+  console.log("");
+  console.log("==============================================");
+  console.log("              DEPLOYMENT SUCCESS");
+  console.log("==============================================");
+  console.log("");
+  console.log("Network:        PREPROD");
+  console.log("Contract:       ", contractAddress);
+  console.log("Transaction ID:  ", transactionId);
+  console.log("");
+  console.log("Save the contract address.");
+  console.log("");
+
+  await wallet.stop();
+}
+
+
+main().catch(async (error) => {
+  console.error("");
+  console.error("==============================================");
+  console.error("              DEPLOYMENT FAILED");
+  console.error("==============================================");
+  console.error("");
+  console.error(error);
+  console.error("");
+
+  process.exit(1);
+});

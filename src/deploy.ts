@@ -57,8 +57,8 @@ async function checkProofServer(url: string): Promise<boolean> {
 }
 
 async function main() {
-  const targetNetwork = (process.argv[2] || "preview").toLowerCase();
-  const config = NETWORKS[targetNetwork] || NETWORKS.preview;
+  const targetNetwork = (process.argv[2] || "preprod").toLowerCase();
+  const config = NETWORKS[targetNetwork] || NETWORKS.preprod;
 
   console.log(
     "================================================================",
@@ -106,44 +106,21 @@ async function main() {
   const initial = contract.initialState(initContext);
   console.log("      ✓ Initial contract state generated successfully.");
 
-  // Step 3: Check Wallet Credentials & Funding
-  console.log("[3/4] Verifying wallet configuration and funding...");
-  const walletSeed = process.env.MIDNIGHT_WALLET_SEED;
-
-  if (!walletSeed) {
-    console.log(
-      "----------------------------------------------------------------",
-    );
-    console.log("ACTION REQUIRED: FUNDING / WALLET SETUP");
-    console.log(
-      "----------------------------------------------------------------",
-    );
-    console.log(
-      "To deploy directly to the live Preview testnet using your wallet:",
-    );
-    console.log("1. Open your Midnight Lace Wallet extension.");
-    console.log('2. Ensure your wallet is switched to the "Preview Network".');
-    console.log(`3. Request free test tokens from the faucet:`);
-    console.log(`   ${config.faucetUrl}`);
-    console.log(
-      "4. Set your wallet seed phrase in your environment or .env file:",
-    );
-    console.log(
-      '   MIDNIGHT_WALLET_SEED="your twelve or twenty-four word seed phrase"',
-    );
-    console.log("5. Re-run: npm run deploy:preview");
-    console.log(
-      "----------------------------------------------------------------",
-    );
-  }
+  // Step 3: Wallet credentials are supplied by the 1AM DApp Connector.
+  console.log(
+    "[3/4] Wallet credentials are supplied by the connected 1AM Wallet...",
+  );
+  console.log(
+    "      Connect 1AM Wallet through the browser DApp Connector to balance and submit transactions.",
+  );
 
   console.log(
-    "[4/4] Deployment requires the official Midnight deployment flow.",
+    "[4/4] Deployment is available from the connected browser wallet.",
   );
-  console.log("Deploy Status : NOT DEPLOYED BY THIS SCRIPT");
+  console.log("Deploy Status : USE THE BROWSER DEPLOY ACTION");
   console.log("");
   console.log(
-    "Use the official Midnight deployment flow with a funded Lace wallet.",
+    "Open the app, Connect 1AM Wallet to Preprod, and choose Deploy Contract to Preprod.",
   );
 }
 

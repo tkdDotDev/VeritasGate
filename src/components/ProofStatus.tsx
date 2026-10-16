@@ -57,8 +57,8 @@ export const ProofStatus: React.FC<ProofStatusProps> = ({
     },
     {
       id: "proof_generated",
-      title: "Preview Transaction Submitted",
-      desc: "Midnight.js submitted the proven transaction through Lace",
+      title: "Preprod Transaction Submitted",
+      desc: "Midnight.js submitted the proven transaction through 1AM Wallet",
       icon: CheckCircle2,
     },
   ];
@@ -145,7 +145,7 @@ export const ProofStatus: React.FC<ProofStatusProps> = ({
 
           <div className="receipt-details">
             <div className="receipt-row">
-              <span className="receipt-key">Preview Contract Address:</span>
+              <span className="receipt-key">Preprod Contract Address:</span>
               <code className="receipt-val">{proofResult.contractAddress}</code>
             </div>
             <div className="receipt-row">

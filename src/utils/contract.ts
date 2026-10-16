@@ -1,7 +1,10 @@
 import type { ConnectedAPI } from "@midnight-ntwrk/dapp-connector-api";
 import { CompiledContract } from "@midnight-ntwrk/compact-js";
-import { httpClientProofProvider } from "@midnight-ntwrk/midnight-js-http-client-proof-provider";
-import { findDeployedContract } from "@midnight-ntwrk/midnight-js-contracts";
+import { dappConnectorProofProvider } from "@midnight-ntwrk/midnight-js-dapp-connector-proof-provider";
+import {
+  deployContract,
+  findDeployedContract,
+} from "@midnight-ntwrk/midnight-js-contracts";
 import { FetchZkConfigProvider } from "@midnight-ntwrk/midnight-js-fetch-zk-config-provider";
 import { indexerPublicDataProvider } from "@midnight-ntwrk/midnight-js-indexer-public-data-provider";
 import {
@@ -9,6 +12,7 @@ import {
   setNetworkId,
 } from "@midnight-ntwrk/midnight-js-network-id";
 import {
+  CostModel,
   Transaction,
   type Binding,
   type ContractAddress,
@@ -34,9 +38,14 @@ export interface MidnightTransactionResult {
   status: "submitted";
 }
 
+export interface MidnightDeploymentResult {
+  contractAddress: string;
+  transactionId: string;
+}
+
 export interface MidnightSubmissionRuntime {
   compiledContract: unknown;
-  zkConfigProvider: Parameters<typeof httpClientProofProvider>[1];
+  zkConfigProvider: Parameters<typeof dappConnectorProofProvider>[1];
   providers: MidnightProviders<any, string, WhistleblowerPrivateState>;
   privateStateId: string;
 }
@@ -95,23 +104,23 @@ async function createMidnightSubmissionRuntime(
   walletApi: ConnectedAPI,
 ): Promise<MidnightSubmissionRuntime> {
   const configuration = await walletApi.getConfiguration();
-  const proofServerUri = "http://localhost:6300";
-  console.log("=== MIDNIGHT PREVIEW CONFIG ===");
+  console.log("=== MIDNIGHT PREPROD CONFIG ===");
   console.log("networkId:", configuration.networkId);
   console.log("indexerUri:", configuration.indexerUri);
   console.log("indexerWsUri:", configuration.indexerWsUri);
   console.log("substrateNodeUri:", configuration.substrateNodeUri);
-  console.log("Local Proof Server:", proofServerUri);
   console.log("==============================");
-  setNetworkId("preview");
+  setNetworkId("preprod");
   const networkId = getNetworkId();
   const addresses = await walletApi.getShieldedAddresses();
-  ensurePrivateStatePassword();
   const privateStateProvider = new BrowserPrivateStateProvider();
-  const zkConfigProvider = new FetchZkConfigProvider(window.location.origin);
-  const proofProvider = httpClientProofProvider(
-    "http://localhost:6300",
+  const zkConfigProvider = new FetchZkConfigProvider(
+    `${window.location.origin}/managed`,
+  );
+  const proofProvider = await dappConnectorProofProvider(
+    walletApi,
     zkConfigProvider,
+    CostModel.initialCostModel(),
   );
   const publicDataProvider = indexerPublicDataProvider(
     configuration.indexerUri,
@@ -156,6 +165,31 @@ async function createMidnightSubmissionRuntime(
       midnightProvider,
     } as unknown as MidnightSubmissionRuntime["providers"],
     privateStateId: PRIVATE_STATE_ID,
+  };
+}
+
+export async function deployVeritasGateContract(
+  walletApi: ConnectedAPI,
+): Promise<MidnightDeploymentResult> {
+  if (!walletApi) {
+    throw new Error("A connected Midnight wallet is required");
+  }
+
+  const runtime = await createMidnightSubmissionRuntime(walletApi);
+  const initialPrivateState = { employeeSecret: new Uint8Array(32) };
+  const deployed = await deployContract(
+    runtime.providers as never,
+    {
+      compiledContract: runtime.compiledContract as never,
+      args: [],
+      privateStateId: runtime.privateStateId,
+      initialPrivateState,
+    },
+  );
+
+  return {
+    contractAddress: deployed.deployTxData.public.contractAddress,
+    transactionId: deployed.deployTxData.public.txId,
   };
 }
 
